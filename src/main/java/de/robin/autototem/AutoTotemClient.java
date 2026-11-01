@@ -34,6 +34,7 @@ public final class AutoTotemClient implements ClientModInitializer {
     private static int travelTick;
     private static Slot sourceSlot;
     private static Slot offhandSlot;
+    private static int sourceSlotId;
     private static double startX;
     private static double startY;
     private static double targetX;
@@ -82,15 +83,15 @@ public final class AutoTotemClient implements ClientModInitializer {
 
         switch (stage) {
             case IDLE -> findTotem(client);
-            case MOVE_TO_TOTEM -> moveAndClick(client, screen, sourceSlot, Stage.MOVE_TO_OFFHAND);
-            case MOVE_TO_OFFHAND -> moveAndClick(client, screen, offhandSlot, Stage.RETURN_OLD_OFFHAND);
+            case MOVE_TO_TOTEM -> moveAndClick(client, screen, sourceSlot, sourceSlotId, Stage.MOVE_TO_OFFHAND);
+            case MOVE_TO_OFFHAND -> moveAndClick(client, screen, offhandSlot, OFFHAND_MENU_SLOT, Stage.RETURN_OLD_OFFHAND);
             case RETURN_OLD_OFFHAND -> {
                 // If the offhand was empty, the cursor is empty after the second click.
                 // Otherwise, put the previously equipped item back into the source slot.
                 if (client.player.inventoryMenu.getCarried().isEmpty()) {
                     stage = Stage.FINISH;
                 } else {
-                    moveAndClick(client, screen, sourceSlot, Stage.FINISH);
+                    moveAndClick(client, screen, sourceSlot, sourceSlotId, Stage.FINISH);
                 }
             }
             case FINISH -> {
@@ -119,11 +120,14 @@ public final class AutoTotemClient implements ClientModInitializer {
         }
 
         sourceSlot = null;
-        for (Slot slot : menu.slots) {
-            if (slot.index != OFFHAND_MENU_SLOT
+        sourceSlotId = -1;
+        for (int menuSlotId = 0; menuSlotId < menu.slots.size(); menuSlotId++) {
+            Slot slot = menu.slots.get(menuSlotId);
+            if (menuSlotId != OFFHAND_MENU_SLOT
                     && slot.hasItem()
                     && slot.getItem().is(Items.TOTEM_OF_UNDYING)) {
                 sourceSlot = slot;
+                sourceSlotId = menuSlotId;
                 break;
             }
         }
@@ -162,6 +166,7 @@ public final class AutoTotemClient implements ClientModInitializer {
             Minecraft client,
             InventoryScreen screen,
             Slot slot,
+            int menuSlotId,
             Stage nextStage
     ) {
         if (slot == null) {
@@ -187,7 +192,7 @@ public final class AutoTotemClient implements ClientModInitializer {
         if (travelTick >= CURSOR_TRAVEL_TICKS) {
             client.gameMode.handleInventoryMouseClick(
                     client.player.inventoryMenu.containerId,
-                    slot.index,
+                    menuSlotId,
                     0,
                     ClickType.PICKUP,
                     client.player
@@ -209,6 +214,7 @@ public final class AutoTotemClient implements ClientModInitializer {
         travelTick = 0;
         sourceSlot = null;
         offhandSlot = null;
+        sourceSlotId = -1;
         stage = Stage.IDLE;
     }
 }
