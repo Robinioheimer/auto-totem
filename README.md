@@ -14,4 +14,4 @@ The mod uses normal inventory menu click actions. It does not search containers,
 
 ## Build
 
-The GitHub Actions workflow builds the mod on every push and can also be started manually from the Actions tab. Download the `auto-totem-1.0.2` artifact from a successful run.
+The GitHub Actions workflow builds the mod on every push and can also be started manually from the Actions tab. Download the `auto-totem-1.0.3` artifact from a successful run.
