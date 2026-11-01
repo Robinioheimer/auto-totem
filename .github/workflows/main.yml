@@ -32,8 +32,8 @@ jobs:
       - name: Upload mod JAR
         uses: actions/upload-artifact@v4
         with:
-          name: auto-totem-1.0.4
+          name: auto-totem-1.0.5
           path: |
-            build/libs/auto-totem-1.0.4.jar
+            build/libs/auto-totem-1.0.5.jar
             !build/libs/*-sources.jar
           if-no-files-found: error
