@@ -8,8 +8,8 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Items;
 import org.lwjgl.glfw.GLFW;
@@ -52,7 +52,7 @@ public final class AutoTotemClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         KeyMapping.Category category = KeyMapping.Category.register(
-                ResourceLocation.fromNamespaceAndPath("autototem", "main")
+                Identifier.fromNamespaceAndPath("autototem", "main")
         );
 
         activateKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
@@ -76,7 +76,7 @@ public final class AutoTotemClient implements ClientModInitializer {
             return;
         }
 
-        if (client.player == null || !(client.screen instanceof InventoryScreen screen)) {
+        if (client.player == null || !(client.gui.screen() instanceof InventoryScreen screen)) {
             reset();
             return;
         }
@@ -149,7 +149,7 @@ public final class AutoTotemClient implements ClientModInitializer {
         try (MemoryStack stack = MemoryStack.stackPush()) {
             DoubleBuffer mouseX = stack.mallocDouble(1);
             DoubleBuffer mouseY = stack.mallocDouble(1);
-            GLFW.glfwGetCursorPos(window.getWindow(), mouseX, mouseY);
+            GLFW.glfwGetCursorPos(window.handle(), mouseX, mouseY);
             startX = mouseX.get(0) / scale;
             startY = mouseY.get(0) / scale;
         }
@@ -190,11 +190,11 @@ public final class AutoTotemClient implements ClientModInitializer {
         screen.mouseMoved(x, y);
 
         if (travelTick >= CURSOR_TRAVEL_TICKS) {
-            client.gameMode.handleInventoryMouseClick(
+            client.gameMode.handleContainerInput(
                     client.player.inventoryMenu.containerId,
                     menuSlotId,
                     0,
-                    ClickType.PICKUP,
+                    ContainerInput.PICKUP,
                     client.player
             );
             travelTick = 0;
