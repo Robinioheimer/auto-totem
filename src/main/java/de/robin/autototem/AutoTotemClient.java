@@ -18,14 +18,9 @@ import org.lwjgl.system.MemoryStack;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
 
-/**
- * A visible, client-side inventory helper.
- *
- * Press G to open the player inventory, move the visible cursor to the first
- * Totem of Undying, and place it in the offhand using normal menu click actions.
- */
+/** Visible client-side inventory helper. */
 public final class AutoTotemClient implements ClientModInitializer {
-    private static final int CURSOR_TRAVEL_TICKS = 6;
+    private static final int CURSOR_TRAVEL_TICKS = 12;
     private static final int OFFHAND_MENU_SLOT = 45;
     private static final int INVENTORY_GUI_WIDTH = 176;
     private static final int INVENTORY_GUI_HEIGHT = 166;
@@ -36,47 +31,25 @@ public final class AutoTotemClient implements ClientModInitializer {
     private static Slot sourceSlot;
     private static Slot offhandSlot;
     private static int sourceSlotId;
-    private static double startX;
-    private static double startY;
-    private static double targetX;
-    private static double targetY;
+    private static double startX, startY, targetX, targetY;
     private static Stage stage = Stage.IDLE;
 
-    private enum Stage {
-        IDLE,
-        MOVE_TO_TOTEM,
-        MOVE_TO_OFFHAND,
-        RETURN_OLD_OFFHAND,
-        FINISH
-    }
+    private enum Stage { IDLE, MOVE_TO_TOTEM, MOVE_TO_OFFHAND, RETURN_OLD_OFFHAND, FINISH }
 
     @Override
     public void onInitializeClient() {
         KeyMapping.Category category = KeyMapping.Category.register(
-                Identifier.fromNamespaceAndPath("autototem", "main")
-        );
-
+                Identifier.fromNamespaceAndPath("autototem", "main"));
         activateKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.autototem.activate",
-                InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_G,
-                category
-        ));
-
+                "key.autototem.activate", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, category));
         ClientTickEvents.END_CLIENT_TICK.register(AutoTotemClient::tick);
     }
 
     private static void tick(Minecraft client) {
         while (activateKey.consumeClick()) {
-            if (!active) {
-                begin(client);
-            }
+            if (!active) begin(client);
         }
-
-        if (!active) {
-            return;
-        }
-
+        if (!active) return;
         if (client.player == null || !(client.gui.screen() instanceof InventoryScreen screen)) {
             reset();
             return;
@@ -87,13 +60,8 @@ public final class AutoTotemClient implements ClientModInitializer {
             case MOVE_TO_TOTEM -> moveAndClick(client, screen, sourceSlot, sourceSlotId, Stage.MOVE_TO_OFFHAND);
             case MOVE_TO_OFFHAND -> moveAndClick(client, screen, offhandSlot, OFFHAND_MENU_SLOT, Stage.RETURN_OLD_OFFHAND);
             case RETURN_OLD_OFFHAND -> {
-                // If the offhand was empty, the cursor is empty after the second click.
-                // Otherwise, put the previously equipped item back into the source slot.
-                if (client.player.inventoryMenu.getCarried().isEmpty()) {
-                    stage = Stage.FINISH;
-                } else {
-                    moveAndClick(client, screen, sourceSlot, sourceSlotId, Stage.FINISH);
-                }
+                if (client.player.inventoryMenu.getCarried().isEmpty()) stage = Stage.FINISH;
+                else moveAndClick(client, screen, sourceSlot, sourceSlotId, Stage.FINISH);
             }
             case FINISH -> {
                 client.gui.setScreen(null);
@@ -103,10 +71,7 @@ public final class AutoTotemClient implements ClientModInitializer {
     }
 
     private static void begin(Minecraft client) {
-        if (client.player == null || client.level == null || client.gui.screen() != null) {
-            return;
-        }
-
+        if (client.player == null || client.level == null || client.gui.screen() != null) return;
         active = true;
         stage = Stage.IDLE;
         client.gui.setScreen(new InventoryScreen(client.player));
@@ -114,30 +79,24 @@ public final class AutoTotemClient implements ClientModInitializer {
 
     private static void findTotem(Minecraft client) {
         var menu = client.player.inventoryMenu;
-
         if (client.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) {
             stage = Stage.FINISH;
             return;
         }
-
         sourceSlot = null;
         sourceSlotId = -1;
-        for (int menuSlotId = 0; menuSlotId < menu.slots.size(); menuSlotId++) {
-            Slot slot = menu.slots.get(menuSlotId);
-            if (menuSlotId != OFFHAND_MENU_SLOT
-                    && slot.hasItem()
-                    && slot.getItem().is(Items.TOTEM_OF_UNDYING)) {
+        for (int id = 0; id < menu.slots.size(); id++) {
+            Slot slot = menu.slots.get(id);
+            if (id != OFFHAND_MENU_SLOT && slot.hasItem() && slot.getItem().is(Items.TOTEM_OF_UNDYING)) {
                 sourceSlot = slot;
-                sourceSlotId = menuSlotId;
+                sourceSlotId = id;
                 break;
             }
         }
-
         if (sourceSlot == null) {
             stage = Stage.FINISH;
             return;
         }
-
         offhandSlot = menu.slots.get(OFFHAND_MENU_SLOT);
         prepareMove(client, sourceSlot, Stage.MOVE_TO_TOTEM);
     }
@@ -145,20 +104,17 @@ public final class AutoTotemClient implements ClientModInitializer {
     private static void prepareMove(Minecraft client, Slot slot, Stage nextStage) {
         InventoryScreen screen = (InventoryScreen) client.gui.screen();
         Window window = client.getWindow();
+        // An inventory screen must have a free, visible cursor. Explicitly restore it
+        // in case another Minecraft input state left the cursor captured.
+        GLFW.glfwSetInputMode(window.handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            DoubleBuffer mouseX = stack.mallocDouble(1);
-            DoubleBuffer mouseY = stack.mallocDouble(1);
-            IntBuffer windowWidth = stack.mallocInt(1);
-            IntBuffer windowHeight = stack.mallocInt(1);
-
-            GLFW.glfwGetCursorPos(window.handle(), mouseX, mouseY);
-            GLFW.glfwGetWindowSize(window.handle(), windowWidth, windowHeight);
-
-            // GLFW cursor coordinates use window coordinates, while Screen uses GUI-scaled coordinates.
-            startX = mouseX.get(0) * screen.width / Math.max(1.0, windowWidth.get(0));
-            startY = mouseY.get(0) * screen.height / Math.max(1.0, windowHeight.get(0));
+            DoubleBuffer mx = stack.mallocDouble(1), my = stack.mallocDouble(1);
+            IntBuffer ww = stack.mallocInt(1), wh = stack.mallocInt(1);
+            GLFW.glfwGetCursorPos(window.handle(), mx, my);
+            GLFW.glfwGetWindowSize(window.handle(), ww, wh);
+            startX = mx.get(0) * screen.width / Math.max(1.0, ww.get(0));
+            startY = my.get(0) * screen.height / Math.max(1.0, wh.get(0));
         }
-
         double left = (screen.width - INVENTORY_GUI_WIDTH) / 2.0;
         double top = (screen.height - INVENTORY_GUI_HEIGHT) / 2.0;
         targetX = left + slot.x + 8.0;
@@ -167,57 +123,35 @@ public final class AutoTotemClient implements ClientModInitializer {
         stage = nextStage;
     }
 
-    private static void moveAndClick(
-            Minecraft client,
-            InventoryScreen screen,
-            Slot slot,
-            int menuSlotId,
-            Stage nextStage
-    ) {
+    private static void moveAndClick(Minecraft client, InventoryScreen screen, Slot slot,
+                                     int menuSlotId, Stage nextStage) {
         if (slot == null) {
             stage = Stage.FINISH;
             return;
         }
-
-        // Prepare the next leg when entering it.
-        if (travelTick == 0) {
-            prepareMove(client, slot, stage);
-        }
+        if (travelTick == 0) prepareMove(client, slot, stage);
 
         travelTick++;
-        double progress = Math.min(1.0, (double) travelTick / CURSOR_TRAVEL_TICKS);
-        double x = startX + (targetX - startX) * progress;
-        double y = startY + (targetY - startY) * progress;
+        double p = Math.min(1.0, (double) travelTick / CURSOR_TRAVEL_TICKS);
+        double guiX = startX + (targetX - startX) * p;
+        double guiY = startY + (targetY - startY) * p;
 
         Window window = client.getWindow();
+        GLFW.glfwSetInputMode(window.handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer windowWidth = stack.mallocInt(1);
-            IntBuffer windowHeight = stack.mallocInt(1);
-            GLFW.glfwGetWindowSize(window.handle(), windowWidth, windowHeight);
-
-            double windowX = x * windowWidth.get(0) / Math.max(1.0, screen.width);
-            double windowY = y * windowHeight.get(0) / Math.max(1.0, screen.height);
+            IntBuffer ww = stack.mallocInt(1), wh = stack.mallocInt(1);
+            GLFW.glfwGetWindowSize(window.handle(), ww, wh);
+            double windowX = guiX * ww.get(0) / Math.max(1.0, screen.width);
+            double windowY = guiY * wh.get(0) / Math.max(1.0, screen.height);
             GLFW.glfwSetCursorPos(window.handle(), windowX, windowY);
         }
-        screen.mouseMoved(x, y);
+        screen.mouseMoved(guiX, guiY);
 
         if (travelTick >= CURSOR_TRAVEL_TICKS) {
-            client.gameMode.handleContainerInput(
-                    client.player.inventoryMenu.containerId,
-                    menuSlotId,
-                    0,
-                    ContainerInput.PICKUP,
-                    client.player
-            );
+            client.gameMode.handleContainerInput(client.player.inventoryMenu.containerId,
+                    menuSlotId, 0, ContainerInput.PICKUP, client.player);
             travelTick = 0;
-
-            if (nextStage == Stage.MOVE_TO_OFFHAND) {
-                stage = Stage.MOVE_TO_OFFHAND;
-            } else if (nextStage == Stage.RETURN_OLD_OFFHAND) {
-                stage = Stage.RETURN_OLD_OFFHAND;
-            } else {
-                stage = Stage.FINISH;
-            }
+            stage = nextStage;
         }
     }
 
