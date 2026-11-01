@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "autototem",
+  "version": "${version}",
+  "name": "Auto Totem (Visible)",
+  "description": "Client-side inventory assistant for a private singleplayer challenge.",
+  "authors": ["Robin"],
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "de.robin.autototem.AutoTotemClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
