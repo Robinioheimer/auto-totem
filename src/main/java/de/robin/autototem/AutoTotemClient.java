@@ -102,7 +102,7 @@ public final class AutoTotemClient implements ClientModInitializer {
     }
 
     private static void begin(Minecraft client) {
-        if (client.player == null || client.level == null || client.screen != null) {
+        if (client.player == null || client.level == null || client.gui.screen() != null) {
             return;
         }
 
@@ -186,7 +186,7 @@ public final class AutoTotemClient implements ClientModInitializer {
 
         Window window = client.getWindow();
         double scale = window.getGuiScale();
-        GLFW.glfwSetCursorPos(window.getWindow(), x * scale, y * scale);
+        GLFW.glfwSetCursorPos(window.handle(), x * scale, y * scale);
         screen.mouseMoved(x, y);
 
         if (travelTick >= CURSOR_TRAVEL_TICKS) {
