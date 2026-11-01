@@ -75,6 +75,8 @@ public final class AutoTotemClient implements ClientModInitializer {
         active = true;
         stage = Stage.IDLE;
         client.gui.setScreen(new InventoryScreen(client.player));
+        // Use Minecraft's own input handler to release the captured cursor.
+        client.mouseHandler.releaseMouse();
     }
 
     private static void findTotem(Minecraft client) {
@@ -104,8 +106,8 @@ public final class AutoTotemClient implements ClientModInitializer {
     private static void prepareMove(Minecraft client, Slot slot, Stage nextStage) {
         InventoryScreen screen = (InventoryScreen) client.gui.screen();
         Window window = client.getWindow();
-        // An inventory screen must have a free, visible cursor. Explicitly restore it
-        // in case another Minecraft input state left the cursor captured.
+        // Keep Minecraft's internal mouse state in sync with the visible OS cursor.
+        client.mouseHandler.releaseMouse();
         GLFW.glfwSetInputMode(window.handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         try (MemoryStack stack = MemoryStack.stackPush()) {
             DoubleBuffer mx = stack.mallocDouble(1), my = stack.mallocDouble(1);
@@ -137,6 +139,9 @@ public final class AutoTotemClient implements ClientModInitializer {
         double guiY = startY + (targetY - startY) * p;
 
         Window window = client.getWindow();
+        // Minecraft may recapture the cursor after a screen transition; release it
+        // through MouseHandler before positioning it for this animation frame.
+        client.mouseHandler.releaseMouse();
         GLFW.glfwSetInputMode(window.handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer ww = stack.mallocInt(1), wh = stack.mallocInt(1);
