@@ -106,8 +106,6 @@ public final class AutoTotemClient implements ClientModInitializer {
     private static void prepareMove(Minecraft client, Slot slot, Stage nextStage) {
         InventoryScreen screen = (InventoryScreen) client.gui.screen();
         Window window = client.getWindow();
-        // Keep Minecraft's internal mouse state in sync with the visible OS cursor.
-        client.mouseHandler.releaseMouse();
         GLFW.glfwSetInputMode(window.handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         try (MemoryStack stack = MemoryStack.stackPush()) {
             DoubleBuffer mx = stack.mallocDouble(1), my = stack.mallocDouble(1);
@@ -139,9 +137,9 @@ public final class AutoTotemClient implements ClientModInitializer {
         double guiY = startY + (targetY - startY) * p;
 
         Window window = client.getWindow();
-        // Minecraft may recapture the cursor after a screen transition; release it
-        // through MouseHandler before positioning it for this animation frame.
-        client.mouseHandler.releaseMouse();
+        // The cursor is released once when the inventory opens. Do not call
+        // releaseMouse() here: it resets Minecraft's cursor state and can undo
+        // the position set by the previous animation frame.
         GLFW.glfwSetInputMode(window.handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         try (MemoryStack stack = MemoryStack.stackPush()) {
             IntBuffer ww = stack.mallocInt(1), wh = stack.mallocInt(1);
