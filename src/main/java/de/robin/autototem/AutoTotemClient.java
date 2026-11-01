@@ -16,6 +16,7 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.DoubleBuffer;
+import java.nio.IntBuffer;
 
 /**
  * A visible, client-side inventory helper.
@@ -144,14 +145,18 @@ public final class AutoTotemClient implements ClientModInitializer {
     private static void prepareMove(Minecraft client, Slot slot, Stage nextStage) {
         InventoryScreen screen = (InventoryScreen) client.gui.screen();
         Window window = client.getWindow();
-        double scale = window.getGuiScale();
-
         try (MemoryStack stack = MemoryStack.stackPush()) {
             DoubleBuffer mouseX = stack.mallocDouble(1);
             DoubleBuffer mouseY = stack.mallocDouble(1);
+            IntBuffer windowWidth = stack.mallocInt(1);
+            IntBuffer windowHeight = stack.mallocInt(1);
+
             GLFW.glfwGetCursorPos(window.handle(), mouseX, mouseY);
-            startX = mouseX.get(0) / scale;
-            startY = mouseY.get(0) / scale;
+            GLFW.glfwGetWindowSize(window.handle(), windowWidth, windowHeight);
+
+            // GLFW cursor coordinates use window coordinates, while Screen uses GUI-scaled coordinates.
+            startX = mouseX.get(0) * screen.width / Math.max(1.0, windowWidth.get(0));
+            startY = mouseY.get(0) * screen.height / Math.max(1.0, windowHeight.get(0));
         }
 
         double left = (screen.width - INVENTORY_GUI_WIDTH) / 2.0;
@@ -185,8 +190,15 @@ public final class AutoTotemClient implements ClientModInitializer {
         double y = startY + (targetY - startY) * progress;
 
         Window window = client.getWindow();
-        double scale = window.getGuiScale();
-        GLFW.glfwSetCursorPos(window.handle(), x * scale, y * scale);
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer windowWidth = stack.mallocInt(1);
+            IntBuffer windowHeight = stack.mallocInt(1);
+            GLFW.glfwGetWindowSize(window.handle(), windowWidth, windowHeight);
+
+            double windowX = x * windowWidth.get(0) / Math.max(1.0, screen.width);
+            double windowY = y * windowHeight.get(0) / Math.max(1.0, screen.height);
+            GLFW.glfwSetCursorPos(window.handle(), windowX, windowY);
+        }
         screen.mouseMoved(x, y);
 
         if (travelTick >= CURSOR_TRAVEL_TICKS) {
