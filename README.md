@@ -1,29 +1,17 @@
-# Auto Totem – Fabric 26.2
+# Auto Totem (Visible)
 
-Client-side starter project for a private singleplayer challenge.
+A client-side Fabric mod for Minecraft Java 26.2.
 
-## Current state
-- Fabric client entrypoint
-- Configurable activation key (default: G)
-- Opens the normal player inventory
-- Scans the player inventory for the first Totem of Undying
+## Controls
 
-## Not implemented yet
-The visible cursor movement and GUI click sequence are intentionally left as the next step. Minecraft 26.2's exact mouse callback/mapping surface must be verified against the installed mappings before wiring synthetic GUI clicks. This avoids shipping code that silently changes inventory slots or relies on guessed APIs.
+- Press **G** while in a world with no other screen open.
+- The player inventory opens.
+- The visible mouse cursor travels to the first Totem of Undying in the inventory.
+- The mod places it in the offhand. If an item was already in the offhand, it is returned to the original totem slot.
+- The inventory closes automatically.
 
-## Requirements
-- Minecraft Java 26.2
-- Fabric Loader 0.20.1+
-- Fabric API 0.161.0+26.2
-- Java 25
-- Gradle 9.x compatible with the selected Fabric Loom version
+The mod uses normal inventory menu click actions. It does not search containers, move items from chests, or run while another screen is open.
 
 ## Build
-Run from this folder:
 
-```bash
-gradle build
-```
-
-The mod JAR will be in `build/libs/`.
-Copy it to `.minecraft/mods/` together with Fabric API.
+The GitHub Actions workflow builds the mod on every push and can also be started manually from the Actions tab. Download the `auto-totem-1.0.1` artifact from a successful run.
