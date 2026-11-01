@@ -142,7 +142,7 @@ public final class AutoTotemClient implements ClientModInitializer {
     }
 
     private static void prepareMove(Minecraft client, Slot slot, Stage nextStage) {
-        InventoryScreen screen = (InventoryScreen) client.screen;
+        InventoryScreen screen = (InventoryScreen) client.gui.screen();
         Window window = client.getWindow();
         double scale = window.getGuiScale();
 
